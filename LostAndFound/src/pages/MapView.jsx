@@ -15,48 +15,48 @@ const MapView = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedItem, setSelectedItem] = useState(null);
   const [mapCenter, setMapCenter] = useState(campusCenter);
-  
+
   // Update filtered items when filters change
   useEffect(() => {
     if (loading) return;
-    
+
     let filtered = [...items];
-    
+
     if (statusFilter !== 'all') {
       filtered = filtered.filter(item => item.status === statusFilter);
     }
-    
+
     if (categoryFilter !== 'all') {
       filtered = filtered.filter(item => item.category === categoryFilter);
     }
-    
+
     setFilteredItems(filtered);
   }, [items, statusFilter, categoryFilter, loading]);
-  
+
   const handleItemClick = (item) => {
     setSelectedItem(item);
     if (item.location) {
       setMapCenter({
         ...item.location,
-        zoom: 18
+        zoom: 18,
       });
     }
   };
-  
+
   const handleMarkerClick = (item) => {
     setSelectedItem(item);
   };
-  
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="container py-6">
+    <div className="min-h-screen min-w-screen flex items-center justify-center bg-gray-50">
+      <div className="container py-6 max-w-7xl w-full">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">Campus Map</h1>
           <p className="text-muted-foreground">
             See where items have been lost and found across campus
           </p>
         </div>
-        
+
         <div className="flex flex-col lg:flex-row gap-6 pb-20 sm:pb-6">
           {/* Map Filters */}
           <div className="w-full lg:w-72 flex-shrink-0 order-2 lg:order-1">
@@ -64,7 +64,7 @@ const MapView = () => {
               <Card>
                 <CardContent className="p-4">
                   <h3 className="font-medium mb-3">Filters</h3>
-                  
+
                   <div className="mb-4">
                     <label className="text-sm font-medium mb-1 block">Status</label>
                     <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
@@ -78,7 +78,7 @@ const MapView = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   <div className="mb-4">
                     <label className="text-sm font-medium mb-1 block">Category</label>
                     <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -98,11 +98,11 @@ const MapView = () => {
                   </div>
                 </CardContent>
               </Card>
-              
+
               <Card className="mt-4">
                 <CardContent className="p-4">
                   <h3 className="font-medium mb-3">Items ({filteredItems.length})</h3>
-                  
+
                   {loading ? (
                     <p>Loading items...</p>
                   ) : filteredItems.length === 0 ? (
@@ -145,16 +145,16 @@ const MapView = () => {
               </Card>
             </div>
           </div>
-          
+
           {/* Map Container */}
           <div className="flex-1 h-[75vh] bg-gray-100 rounded-lg overflow-hidden order-1 lg:order-2 relative">
-            <CampusMap 
-              items={filteredItems} 
-              center={mapCenter} 
-              onMarkerClick={handleMarkerClick} 
-              selectedItem={selectedItem} 
+            <CampusMap
+              items={filteredItems}
+              center={mapCenter}
+              onMarkerClick={handleMarkerClick}
+              selectedItem={selectedItem}
             />
-            
+
             {selectedItem && (
               <div className="absolute bottom-0 left-0 right-0 p-4">
                 <Card className="shadow-lg">
@@ -175,11 +175,7 @@ const MapView = () => {
                           <span>at {selectedItem.location.description || 'Custom location'}</span>
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => setSelectedItem(null)}
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedItem(null)}>
                         ✕
                       </Button>
                     </div>
