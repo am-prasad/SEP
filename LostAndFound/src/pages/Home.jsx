@@ -26,7 +26,7 @@ const Home = () => {
   }, [items, loading]);
   
   return (
-    <div className="container py-6 pb-20 sm:pb-6 h-screen w-screen">
+    <div className="container py-6 pb-20 sm:pb-6 w-screen">
       <section className="flex flex-col items-center text-center mb-10 animate-fade-in">
         <h1 className="text-4xl font-bold mb-4">CampoFound</h1>
         <p className="text-lg text-muted-foreground max-w-xl mb-8">

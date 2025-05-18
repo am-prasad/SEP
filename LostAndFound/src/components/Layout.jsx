@@ -6,7 +6,7 @@ const Layout = () => {
   const location = useLocation();
   
   return (
-    <div className="min-h-screen w-screen w-full flex flex-col">
+    <div className="min-h-screen w-screen  flex flex-col">
 
       <Navigation currentPath={location.pathname} />
       <main className="flex-1">
