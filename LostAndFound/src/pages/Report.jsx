@@ -99,7 +99,7 @@ const Report = () => {
   };
   
   return (
-    <div className="container py-6 pb-20 sm:pb-6 min-h-screen">
+     <div className="flex flex-col items-center justify-center text-center min-h-screen w-screen">
       <h1 className="text-3xl font-bold mb-4">Report an Item</h1>
       <p className="text-muted-foreground mb-6">
         Report a lost or found item on campus to help it find its way back home

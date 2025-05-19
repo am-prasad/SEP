@@ -35,7 +35,7 @@ const Navigation = ({ currentPath }) => {
         <div className="flex items-center gap-3">
           <Link to="/" className="text-xl font-bold text-primary flex items-center gap-2">
             <MapPin className="h-6 w-6 text-primary" />
-            <span className={cn(isMobile ? "sr-only" : "")}>Campus Lost & Found</span>
+            <span className={cn(isMobile ? "sr-only" : "")}>Campus Lost and Found</span>
           </Link>
         </div>
         
