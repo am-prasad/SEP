@@ -313,12 +313,7 @@ const ItemDetails = ({ itemId, onBack, itemsData }) => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-64 bg-muted rounded-md mb-3 overflow-hidden">
-                {/* Mini map component would go here */}
-                <div className="h-full flex items-center justify-center bg-accent">
-                  <MapPin className="h-8 w-8 text-muted-foreground" />
-                </div>
-              </div>
+             <div className="h-64 mb-3 overflow-hidden"> <MapPreview lat={item.location.lat} lng={item.location.lng} /> </div>
               <p className="text-sm">
                 <span className="font-medium">{item.location.description || 'Custom location'}</span>
                 <br />
