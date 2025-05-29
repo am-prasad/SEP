@@ -23,12 +23,20 @@ const RecentItemsList = ({ items, loading }) => {
     );
   }
   
+  if (!items || items.length === 0) {
+    return (
+      <p className="text-muted-foreground">No items have been reported yet.</p>
+    );
+  }
+  
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {items.length === 0 ? (
-        <p className="text-muted-foreground">No items have been reported yet.</p>
-      ) : (
-        items.map((item) => (
+      {items.map((item) => {
+        // Defensive check for unique key
+        if (!item.id) {
+          console.warn('Item missing unique id:', item);
+        }
+        return (
           <Link key={item.id} to={`/item/${item.id}`}>
             <Card className="cursor-pointer hover:bg-accent/50 transition-colors border">
               <CardContent className="p-4">
@@ -50,15 +58,15 @@ const RecentItemsList = ({ items, loading }) => {
                       <Badge variant={item.status === 'lost' ? 'destructive' : 'default'} className="text-xs">
                         {item.status === 'lost' ? 'Lost' : 'Found'}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">{item.location.description || 'Custom location'}</span>
+                      <span className="text-xs text-muted-foreground">{item.location?.description || 'Custom location'}</span>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </Link>
-        ))
-      )}
+        );
+      })}
     </div>
   );
 };
