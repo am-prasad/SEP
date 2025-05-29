@@ -1,9 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Item, ItemStatus, MatchedItem } from '@/types';
-import { mockItems } from '@/data/mockData';
 import { toast } from 'sonner';
 
 const ItemsContext = createContext(undefined);
+const API_BASE_URL = 'http://localhost:3000/api/items';
 
 export const useItems = () => {
   const context = useContext(ItemsContext);
@@ -17,81 +16,105 @@ export const ItemsProvider = ({ children }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetch items from backend
   useEffect(() => {
-    const initializeData = async () => {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setItems(mockItems);
-      setLoading(false);
+    const fetchItems = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(API_BASE_URL);
+        const data = await res.json();
+        setItems(data);
+      } catch (error) {
+        console.error('Failed to fetch items:', error);
+        toast.error('Failed to load items');
+      } finally {
+        setLoading(false);
+      }
     };
-    initializeData();
+
+    fetchItems();
   }, []);
 
   const addItem = async (item) => {
-    const newItem = {
-      ...item,
-      id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-    };
+    try {
+      const res = await fetch(API_BASE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      });
 
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setItems(prevItems => [...prevItems, newItem]);
-    toast.success("Item reported successfully!");
-    return newItem;
+      if (!res.ok) throw new Error('Failed to add item');
+      const newItem = await res.json();
+      setItems(prev => [...prev, newItem]);
+      toast.success('Item reported successfully!');
+      return newItem;
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to report item');
+      return null;
+    }
   };
 
   const getItemById = (id) => {
-    return items.find(item => item.id === id);
+    return items.find(item => item._id === id); // Use MongoDB _id
   };
 
   const updateItem = async (id, updates) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      const res = await fetch(`${API_BASE_URL}/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      });
 
-    let updatedItem;
-    setItems(prevItems =>
-      prevItems.map(item => {
-        if (item.id === id) {
-          updatedItem = { ...item, ...updates };
-          return updatedItem;
-        }
-        return item;
-      })
-    );
+      if (!res.ok) throw new Error('Failed to update item');
+      const updated = await res.json();
 
-    if (updatedItem) {
-      toast.success("Item updated successfully!");
+      setItems(prev =>
+        prev.map(item => (item._id === id ? updated : item))
+      );
+
+      toast.success('Item updated successfully!');
+      return updated;
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to update item');
     }
-
-    return updatedItem;
   };
 
   const deleteItem = async (id) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    setItems(prevItems => prevItems.filter(item => item.id !== id));
-    toast.success("Item deleted successfully!");
-    return true;
+    try {
+      const res = await fetch(`${API_BASE_URL}/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) throw new Error('Failed to delete item');
+
+      setItems(prev => prev.filter(item => item._id !== id));
+      toast.success('Item deleted successfully!');
+      return true;
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to delete item');
+      return false;
+    }
   };
 
   const findMatches = async (searchItem) => {
-    await new Promise(resolve => setTimeout(resolve, 500));
-
     const oppositeStatus = searchItem.status === 'lost' ? 'found' : 'lost';
     const potentialMatches = items.filter(item => item.status === oppositeStatus);
 
     const matches = potentialMatches.map(item => {
       let score = 0;
 
-      if (searchItem.category && item.category === searchItem.category) {
-        score += 30;
-      }
+      if (searchItem.category && item.category === searchItem.category) score += 30;
 
       if (searchItem.title && item.title) {
         const searchWords = searchItem.title.toLowerCase().split(' ');
         const itemWords = item.title.toLowerCase().split(' ');
 
         searchWords.forEach(word => {
-          if (word.length > 3 && itemWords.includes(word)) {
-            score += 30 / searchWords.length;
-          }
+          if (word.length > 3 && itemWords.includes(word)) score += 30 / searchWords.length;
         });
       }
 
@@ -100,9 +123,7 @@ export const ItemsProvider = ({ children }) => {
         const itemWords = item.description.toLowerCase().split(' ');
 
         searchWords.forEach(word => {
-          if (word.length > 3 && itemWords.includes(word)) {
-            score += 20 / searchWords.length;
-          }
+          if (word.length > 3 && itemWords.includes(word)) score += 20 / searchWords.length;
         });
       }
 
@@ -114,11 +135,8 @@ export const ItemsProvider = ({ children }) => {
           item.location.lng
         );
 
-        if (distance < 0.5) {
-          score += 20;
-        } else if (distance < 1) {
-          score += 10;
-        }
+        if (distance < 0.5) score += 20;
+        else if (distance < 1) score += 10;
       }
 
       return { item, matchScore: score };
@@ -132,19 +150,12 @@ export const ItemsProvider = ({ children }) => {
 
   const filterItems = (status, category, query) => {
     return items.filter(item => {
-      if (status && item.status !== status) {
-        return false;
-      }
+      if (status && item.status !== status) return false;
+      if (category && category !== 'all' && item.category !== category) return false;
 
-      if (category && category !== 'all' && item.category !== category) {
-        return false;
-      }
-
-      if (query && query.length > 0) {
-        const searchLower = query.toLowerCase();
-        const titleMatch = item.title?.toLowerCase().includes(searchLower) || false;
-        const descMatch = item.description?.toLowerCase().includes(searchLower) || false;
-        return titleMatch || descMatch;
+      if (query?.length > 0) {
+        const q = query.toLowerCase();
+        return item.title?.toLowerCase().includes(q) || item.description?.toLowerCase().includes(q);
       }
 
       return true;

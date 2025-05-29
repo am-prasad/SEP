@@ -1,22 +1,70 @@
-import express, {json} from 'express'
+import express, { json } from 'express';
 import mongoose from 'mongoose';
+import cors from 'cors';
 
-
-const app = express()
+// Create Express app
+const app = express();
 app.use(json());
-mongoose.connect('mongodb://127.0.0.1:27017/')
-  .then(() => console.log('Connected!')).catch(()=>{console.log(`not cconncected`)});
+app.use(cors());
 
+// Connect to MongoDB (use your desired database name)
+mongoose.connect('mongodb://127.0.0.1:27017/lostandfound')
+  .then(() => console.log('MongoDB connected'))
+  .catch((err) => console.error('MongoDB connection failed', err));
 
-app.listen(3000,()=>{console.log(`Server is running`)})
+// Define Item schema and model
+const itemSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  category: {
+    type: String,
+    enum: ['electronics', 'clothing', 'accessories', 'documents', 'keys', 'other'],
+    required: true
+  },
+  status: { type: String, enum: ['lost', 'found'], required: true },
+  location: {
+    lat: Number,
+    lng: Number,
+    description: String
+  },
+  date: { type: Date, default: Date.now },
+  reportedBy: { type: String, default: 'Anonymous User' },
+  contactInfo: { type: String, required: true },
+  imageUrl: String,
+  isResolved: { type: Boolean, default: false }
+});
+
+const Item = mongoose.model('Item', itemSchema);
+
+// Routes
 
 app.get('/', (req, res) => {
-  res.send('Pras')
+  res.send('Welcome to Lost & Found API');
+});
 
-})
-app.post('/api/item',(req,res)=>{
-  console.log(req.body);
-  res.send(req.body);})
-  
+// Get all items
+app.get('/api/items', async (req, res) => {
+  try {
+    const items = await Item.find().sort({ date: -1 });
+    res.json(items);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching items', error: err });
+  }
+});
 
-// app.listen(3000)
+// Post a new item report
+app.post('/api/items', async (req, res) => {
+  try {
+    const newItem = new Item(req.body);
+    await newItem.save();
+    res.status(201).json(newItem);
+  } catch (err) {
+    console.error('Error saving item:', err);
+    res.status(400).json({ message: 'Failed to save item', error: err });
+  }
+});
+
+// Start server
+app.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000');
+});
