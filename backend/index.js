@@ -2,6 +2,17 @@ import express, { json } from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 
+// Import registration controller functions
+import {
+  registerCollegeUser,
+  sendGuestOtp,
+  verifyGuestOtp,
+} from './controllers/registerController.js';
+
+// Import CollegeUser and GuestUser models
+import CollegeUser from './models/CollegeUser.js';
+import GuestUser from './models/GuestUser.js';
+
 // Create Express app
 const app = express();
 app.use(json());
@@ -42,6 +53,8 @@ app.get('/', (req, res) => {
   res.send('Welcome to Lost & Found API');
 });
 
+// Lost & Found item routes
+
 // Get all items
 app.get('/api/items', async (req, res) => {
   try {
@@ -64,7 +77,14 @@ app.post('/api/items', async (req, res) => {
   }
 });
 
+// Registration routes
+
+app.post('/api/register/college', registerCollegeUser);
+app.post('/api/register/guest/send-otp', sendGuestOtp);
+app.post('/api/register/guest/verify-otp', verifyGuestOtp);
+
 // Start server
-app.listen(3000, () => {
-  console.log('Server is running on http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
