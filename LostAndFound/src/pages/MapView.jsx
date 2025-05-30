@@ -30,7 +30,7 @@ function ChangeView({ center, zoom }) {
   return null;
 }
 
-const campusCenter = { lat: 40.73061, lng: -73.935242, zoom: 15 }; // Replace with your campus center
+const campusCenter = { lat: 12.31330021942581, lng: 76.61337063084042, zoom: 17 };
 
 const MapView = () => {
   const { items, loading } = useItems();
@@ -41,7 +41,6 @@ const MapView = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [mapCenter, setMapCenter] = useState(campusCenter);
 
-  // Filter items by status and category
   useEffect(() => {
     if (loading) return;
 
@@ -74,8 +73,8 @@ const MapView = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center text-center min-h-screen w-screen">
-      <div className="container py-6 max-w-7xl w-full">
+    <div className="flex flex-col items-center justify-center text-center min-h-screen px-4 mx-auto max-w-full">
+      <div className="mx-auto py-6 max-w-7xl w-full">
         <div className="mb-6">
           <h1 className="text-3xl font-bold mb-2">Campus Map</h1>
           <p className="text-muted-foreground">
@@ -173,7 +172,7 @@ const MapView = () => {
           </div>
 
           {/* Map Container */}
-          <div className="w-screen lg:w-[800px] h-[75vh] bg-gray-100 rounded-lg overflow-hidden order-1 lg:order-2 relative">
+          <div className="w-full lg:w-[800px] h-[75vh] bg-gray-100 rounded-lg overflow-hidden order-1 lg:order-2 relative">
             <MapContainer
               center={[mapCenter.lat, mapCenter.lng]}
               zoom={mapCenter.zoom || 15}

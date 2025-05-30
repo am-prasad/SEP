@@ -130,7 +130,7 @@ export const mockItems = [
 
 // Default campus center coordinates (for map centering)
 export const campusCenter = {
-  lat: 40.107126,
-  lng: -88.227326,
+  lat: 12.2958,
+  lng: 76.6394,
   zoom: 15
 };

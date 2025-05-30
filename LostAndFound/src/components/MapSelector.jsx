@@ -70,7 +70,7 @@ const MapSelector = ({ onLocationSelect }) => {
 
       <div className="flex-1 relative">
         <MapContainer
-          center={[40.1062, -88.2272]} // Default center (UIUC example)
+          center={[12.31330021942581, 76.61337063084042]} // Default center (UIUC example)
           zoom={16}
           scrollWheelZoom={true}
           style={{ height: '100%', width: '100%' }}
