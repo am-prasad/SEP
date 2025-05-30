@@ -3,6 +3,8 @@ import './index.css';
 // App.css is now imported in main.jsx instead of here
 
 import { Toaster } from "./components/ui/toaster";
+import 'leaflet/dist/leaflet.css';
+
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

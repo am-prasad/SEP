@@ -29,11 +29,14 @@ const formSchema = z.object({
 });
 
 const Report = () => {
-  const { addItem } = useItems();
+  const { items, addItem } = useItems();
   const navigate = useNavigate();
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
+  // Filter lost items to show in dropdown when reporting a found item
+  const lostItems = items.filter(item => item.status === 'lost');
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -50,19 +53,22 @@ const Report = () => {
       }
     }
   });
-  
+
+  // Watch status field to toggle item name input/dropdown
+  const status = form.watch('status');
+
   const onLocationSelect = (location) => {
     setSelectedLocation(location);
     form.setValue('location', location);
   };
-  
+
   const onSubmit = async (data) => {
     if (!selectedLocation) {
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const reportItem = {
         title: data.title,
@@ -80,7 +86,7 @@ const Report = () => {
         imageUrl: data.imageUrl,
         isResolved: false
       };
-      
+
       await addItem(reportItem);
       navigate('/browse');
     } catch (error) {
@@ -89,24 +95,24 @@ const Report = () => {
       setIsSubmitting(false);
     }
   };
-  
+
   const handleImageUpload = (e) => {
     if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
+      // Replace this with actual image upload logic if needed
       const imageUrl = "https://images.unsplash.com/photo-1622560481153-02f36932d31b";
       form.setValue('imageUrl', imageUrl);
     }
   };
-  
+
   return (
-     <div className="flex flex-col items-center justify-center text-center min-h-screen w-screen">
+    <div className="flex flex-col items-center justify-center text-center min-h-screen w-screen px-4">
       <h1 className="text-3xl font-bold mb-4">Report an Item</h1>
       <p className="text-muted-foreground mb-6">
         Report a lost or found item on campus to help it find its way back home
       </p>
-      
+
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-3xl w-full">
           <Card>
             <CardContent className="pt-6">
               <FormField
@@ -118,7 +124,7 @@ const Report = () => {
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                         className="flex space-x-4"
                       >
                         <div className="flex items-center space-x-2">
@@ -139,29 +145,65 @@ const Report = () => {
                   </FormItem>
                 )}
               />
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
                   name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Item Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="E.g., Blue Water Bottle" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                  render={({ field }) => {
+                    if (status === 'found') {
+                      // Dropdown of lost items when reporting a found item
+                      return (
+                        <FormItem>
+                          <FormLabel>Select Lost Item Name</FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select lost item" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {lostItems.length === 0 ? (
+                                <SelectItem value="" disabled>
+                                  No lost items found
+                                </SelectItem>
+                              ) : (
+                                lostItems.map((item) => (
+                                  <SelectItem key={item.id} value={item.title}>
+                                    {item.title}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }
+                    // Normal input for lost item report
+                    return (
+                      <FormItem>
+                        <FormLabel>Item Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="E.g., Blue Water Bottle" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="category"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select a category" />
@@ -181,7 +223,7 @@ const Report = () => {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="description"
@@ -189,7 +231,7 @@ const Report = () => {
                   <FormItem className="mt-6">
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea 
+                      <Textarea
                         placeholder="Describe the item with any identifying features..."
                         className="min-h-32"
                         {...field}
@@ -201,7 +243,7 @@ const Report = () => {
               />
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-lg font-medium mb-4">Item Image</h3>
@@ -223,14 +265,14 @@ const Report = () => {
                   </label>
                 </div>
               </div>
-              
+
               {form.watch('imageUrl') && (
                 <div className="mt-4">
                   <p className="text-sm text-muted-foreground">Image preview:</p>
                   <div className="mt-2 border rounded-md overflow-hidden">
-                    <img 
-                      src={form.watch('imageUrl')} 
-                      alt="Item preview" 
+                    <img
+                      src={form.watch('imageUrl')}
+                      alt="Item preview"
                       className="max-h-60 w-full object-cover"
                     />
                   </div>
@@ -238,7 +280,7 @@ const Report = () => {
               )}
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="pt-6">
               <h3 className="text-lg font-medium mb-4 flex items-center">
@@ -247,11 +289,11 @@ const Report = () => {
               <p className="text-muted-foreground mb-4">
                 Select the location where you lost or found the item on the map
               </p>
-              
+
               <div className="h-80 mb-4 border rounded-md overflow-hidden">
                 <MapSelector onLocationSelect={onLocationSelect} />
               </div>
-              
+
               {selectedLocation && (
                 <div className="bg-accent p-3 rounded-md text-sm">
                   <p>Selected location: {selectedLocation.description || 'Custom location'}</p>
@@ -262,7 +304,7 @@ const Report = () => {
               )}
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="pt-6">
               <FormField
@@ -272,9 +314,9 @@ const Report = () => {
                   <FormItem>
                     <FormLabel>Contact Email</FormLabel>
                     <FormControl>
-                      <Input 
+                      <Input
                         type="email"
-                        placeholder="your.email@example.edu" 
+                        placeholder="your.email@example.edu"
                         {...field}
                       />
                     </FormControl>
@@ -284,7 +326,7 @@ const Report = () => {
               />
             </CardContent>
           </Card>
-          
+
           <div className="flex justify-end space-x-4">
             <Button type="button" variant="outline" onClick={() => navigate(-1)}>
               Cancel
