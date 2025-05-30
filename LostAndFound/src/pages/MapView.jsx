@@ -147,7 +147,8 @@ const MapView = () => {
           </div>
 
           {/* Map Container */}
-          <div className="flex-1 h-[75vh] bg-gray-100 rounded-lg overflow-hidden order-1 lg:order-2 relative">
+          <div className="w-screen lg:w-[800px] h-[75vh] bg-gray-100 rounded-lg overflow-hidden order-1 lg:order-2 relative">
+
             <CampusMap
               items={filteredItems}
               center={mapCenter}

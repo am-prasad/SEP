@@ -1,57 +1,46 @@
 import React from 'react';
-import { MapPin, Map } from 'lucide-react';
+import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api';
+
+const mapContainerStyle = {
+  width: '100%',
+  height: '100%',
+};
+
+const defaultZoom = 16;
 
 const CampusMap = ({ items, center, onMarkerClick, selectedItem }) => {
-  const handleMarkerClick = (item) => {
-    if (onMarkerClick) {
-      onMarkerClick(item);
-    }
-  };
+  const { isLoaded, loadError } = useJsApiLoader({
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
+  });
+
+  if (loadError) return <div>Error loading maps</div>;
+  if (!isLoaded) return <div>Loading map...</div>;
 
   return (
-    <div className="h-full relative bg-muted">
-      <div className="absolute inset-0 flex items-center justify-center flex-col gap-4">
-        <Map className="h-16 w-16 text-primary opacity-20" />
-        <div className="text-center px-4">
-          <p className="font-medium">Map Placeholder</p>
-          <p className="text-sm text-muted-foreground">
-            In a real application, this would be an interactive map for showing item locations
-          </p>
-        </div>
-      </div>
-
-      {/* Simulate map markers */}
-      <div className="absolute inset-0">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            className={`absolute p-1 transform -translate-x-1/2 -translate-y-1/2 cursor-pointer ${
-              item.id === selectedItem?.id ? 'z-10' : ''
-            }`}
-            style={{
-              // Randomize positions for demo
-              left: `${(item.location.lat * 10) % 90 + 5}%`,
-              top: `${(item.location.lng * 10) % 80 + 10}%`,
-            }}
-            onClick={() => handleMarkerClick(item)}
-          >
-            <div className="flex flex-col items-center">
-              <MapPin
-                className={`h-6 w-6 ${
-                  item.status === 'lost' ? 'text-red-500' : 'text-green-500'
-                } ${item.id === selectedItem?.id ? 'text-primary' : ''}`}
-                fill={item.id === selectedItem?.id ? 'currentColor' : 'none'}
-              />
-              {item.id === selectedItem?.id && (
-                <div className="mt-1 px-2 py-1 bg-background text-foreground text-xs rounded shadow whitespace-nowrap">
-                  {item.title}
-                </div>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
+    <GoogleMap
+      mapContainerStyle={mapContainerStyle}
+      center={center}
+      zoom={center.zoom || defaultZoom}
+    >
+      {items.map((item) => (
+        <MarkerF
+          key={item.id}
+          position={{ lat: item.location.lat, lng: item.location.lng }}
+          onClick={() => onMarkerClick(item)}
+          label={{
+            text: item.title,
+            className: item.id === selectedItem?.id ? 'text-primary' : '',
+            fontSize: '12px',
+          }}
+          icon={{
+            url:
+              item.status === 'lost'
+                ? 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+                : 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
+          }}
+        />
+      ))}
+    </GoogleMap>
   );
 };
 
