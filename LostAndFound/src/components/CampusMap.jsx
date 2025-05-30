@@ -1,46 +1,60 @@
 import React from 'react';
-import { GoogleMap, MarkerF, useJsApiLoader } from '@react-google-maps/api';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%',
-};
+// Fix default icon issue with Leaflet + React
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
-const defaultZoom = 16;
+let DefaultIcon = L.icon({
+  iconRetinaUrl,
+  iconUrl,
+  shadowUrl,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+L.Marker.prototype.options.icon = DefaultIcon;
+
+// Helper component to update map center
+function ChangeView({ center, zoom }) {
+  const map = useMap();
+  map.setView(center, zoom);
+  return null;
+}
 
 const CampusMap = ({ items, center, onMarkerClick, selectedItem }) => {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-  });
-
-  if (loadError) return <div>Error loading maps</div>;
-  if (!isLoaded) return <div>Loading map...</div>;
-
   return (
-    <GoogleMap
-      mapContainerStyle={mapContainerStyle}
-      center={center}
-      zoom={center.zoom || defaultZoom}
+    <MapContainer
+      center={[center.lat, center.lng]}
+      zoom={center.zoom || 15}
+      style={{ height: '100%', width: '100%' }}
+      scrollWheelZoom={true}
     >
-      {items.map((item) => (
-        <MarkerF
+      <ChangeView center={[center.lat, center.lng]} zoom={center.zoom || 15} />
+      <TileLayer
+        attribution='&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+      />
+      {items.map(item => (
+        <Marker
           key={item.id}
-          position={{ lat: item.location.lat, lng: item.location.lng }}
-          onClick={() => onMarkerClick(item)}
-          label={{
-            text: item.title,
-            className: item.id === selectedItem?.id ? 'text-primary' : '',
-            fontSize: '12px',
+          position={[item.location.lat, item.location.lng]}
+          eventHandlers={{
+            click: () => onMarkerClick(item),
           }}
-          icon={{
-            url:
-              item.status === 'lost'
-                ? 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
-                : 'http://maps.google.com/mapfiles/ms/icons/green-dot.png',
-          }}
-        />
+        >
+          <Popup>
+            <div>
+              <h3>{item.title}</h3>
+              <p>Status: {item.status}</p>
+              <p>Location: {item.location.description || 'Custom location'}</p>
+            </div>
+          </Popup>
+        </Marker>
       ))}
-    </GoogleMap>
+    </MapContainer>
   );
 };
 
