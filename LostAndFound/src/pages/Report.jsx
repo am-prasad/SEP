@@ -4,23 +4,27 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useItems } from '@/context/ItemsContext';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Upload, MapPin } from 'lucide-react';
 import MapSelector from '@/components/MapSelector';
 
 const formSchema = z.object({
-  title: z.string().min(3, { message: 'Title must be at least 3 characters' }).max(100),
-  description: z.string().min(10, { message: 'Description must be at least 10 characters' }),
+  title: z.string().min(3).max(100),
+  description: z.string().min(10),
   category: z.enum(['electronics', 'clothing', 'accessories', 'documents', 'keys', 'other']),
   status: z.enum(['lost', 'found']),
   imageUrl: z.string().optional(),
-  contactInfo: z.string().email({ message: 'Please enter a valid email address' }),
+  contactInfo: z.string().email(),
   location: z.object({
     lat: z.number(),
     lng: z.number(),
@@ -34,8 +38,7 @@ const Report = () => {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filter lost items to show in dropdown when reporting a found item
-  const lostItems = items.filter(item => item.status === 'lost');
+  const lostItems = items.filter(item => item.status === 'lost' && !item.isResolved);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -54,7 +57,6 @@ const Report = () => {
     }
   });
 
-  // Watch status field to toggle item name input/dropdown
   const status = form.watch('status');
 
   const onLocationSelect = (location) => {
@@ -63,10 +65,7 @@ const Report = () => {
   };
 
   const onSubmit = async (data) => {
-    if (!selectedLocation) {
-      return;
-    }
-
+    if (!selectedLocation) return;
     setIsSubmitting(true);
 
     try {
@@ -87,6 +86,16 @@ const Report = () => {
         isResolved: false
       };
 
+      // If it's a "found" report, mark matching lost item as resolved
+      if (data.status === 'found') {
+        const matchingLostItem = items.find(
+          item => item.status === 'lost' && item.title === data.title && !item.isResolved
+        );
+        if (matchingLostItem) {
+          matchingLostItem.isResolved = true; // This assumes mutation is allowed
+        }
+      }
+
       await addItem(reportItem);
       navigate('/browse');
     } catch (error) {
@@ -97,8 +106,8 @@ const Report = () => {
   };
 
   const handleImageUpload = (e) => {
-    if (e.target.files && e.target.files.length > 0) {
-      // Replace this with actual image upload logic if needed
+    if (e.target.files?.length) {
+      // Replace with real upload logic if needed
       const imageUrl = "https://images.unsplash.com/photo-1622560481153-02f36932d31b";
       form.setValue('imageUrl', imageUrl);
     }
@@ -152,15 +161,10 @@ const Report = () => {
                   name="title"
                   render={({ field }) => {
                     if (status === 'found') {
-                      // Dropdown of lost items when reporting a found item
                       return (
                         <FormItem>
                           <FormLabel>Select Lost Item Name</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                            defaultValue={field.value}
-                          >
+                          <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl>
                               <SelectTrigger>
                                 <SelectValue placeholder="Select lost item" />
@@ -168,13 +172,13 @@ const Report = () => {
                             </FormControl>
                             <SelectContent>
                               {lostItems.length === 0 ? (
-                                <SelectItem value="" disabled>
-                                  No lost items found
+                                <SelectItem value="no-items" disabled>
+                                  No unresolved lost items
                                 </SelectItem>
                               ) : (
                                 lostItems.map((item) => (
                                   <SelectItem key={item.id} value={item.title}>
-                                    {item.title}
+                                    {item.category} - {item.title}
                                   </SelectItem>
                                 ))
                               )}
@@ -184,7 +188,7 @@ const Report = () => {
                         </FormItem>
                       );
                     }
-                    // Normal input for lost item report
+
                     return (
                       <FormItem>
                         <FormLabel>Item Name</FormLabel>
@@ -269,13 +273,11 @@ const Report = () => {
               {form.watch('imageUrl') && (
                 <div className="mt-4">
                   <p className="text-sm text-muted-foreground">Image preview:</p>
-                  <div className="mt-2 border rounded-md overflow-hidden">
-                    <img
-                      src={form.watch('imageUrl')}
-                      alt="Item preview"
-                      className="max-h-60 w-full object-cover"
-                    />
-                  </div>
+                  <img
+                    src={form.watch('imageUrl')}
+                    alt="Item preview"
+                    className="max-h-60 w-full object-cover mt-2 rounded-md"
+                  />
                 </div>
               )}
             </CardContent>
@@ -316,7 +318,7 @@ const Report = () => {
                     <FormControl>
                       <Input
                         type="email"
-                        placeholder="your.email@example.edu"
+                        placeholder="abc123@xyz.com"
                         {...field}
                       />
                     </FormControl>
