@@ -218,7 +218,7 @@ export async function sendGuestOtp(req, res) {
 
     // Send OTP via Twilio
     const messageOptions = {
-      body: `Your OTP for Lost & Found app is: ${otp}. Valid for 10 minutes. Do not share this OTP.`,
+      body: `Your OTP for Campofound app is: ${otp}. Valid for 10 minutes. Do not share this OTP.`,
       to: formattedMobile,
     };
 
