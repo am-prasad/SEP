@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import bcrypt from 'bcrypt'; // Needed for password comparison
 dotenv.config();
 
 // Import controller functions
@@ -25,7 +26,7 @@ mongoose.connect('mongodb://127.0.0.1:27017/lostandfound')
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => console.error('❌ MongoDB connection failed:', err));
 
-// Define Item schema & model (if not using external file)
+// Define Item schema & model
 const itemSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
@@ -82,9 +83,46 @@ app.post('/api/register/college', registerCollegeUser);
 app.post('/api/register/guest/send-otp', sendGuestOtp);
 app.post('/api/register/guest/verify-otp', verifyGuestOtp);
 
-// 🔐 Admin Endpoints
+// ✅ IDENTITY VERIFICATION ROUTES
 
-// Get all college users
+// College user verification
+app.post('/api/verify/college', async (req, res) => {
+  const { srNo, password } = req.body;
+
+  try {
+    const user = await CollegeUser.findOne({ srNo });
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'College user not found' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid password' });
+    }
+
+    res.json({ success: true, message: 'College user verified' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Verification error', error: err });
+  }
+});
+
+// Guest user verification
+app.post('/api/verify/guest', async (req, res) => {
+  const { mobile } = req.body;
+
+  try {
+    const guest = await GuestUser.findOne({ mobile });
+    if (!guest) {
+      return res.status(404).json({ success: false, message: 'Guest user not found' });
+    }
+
+    res.json({ success: true, message: 'Guest user verified' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Verification error', error: err });
+  }
+});
+
+// 🔐 Admin Endpoints
 app.get('/api/admin/users/college', async (req, res) => {
   try {
     const users = await CollegeUser.find();
@@ -94,7 +132,6 @@ app.get('/api/admin/users/college', async (req, res) => {
   }
 });
 
-// Get all guest users
 app.get('/api/admin/users/guest', async (req, res) => {
   try {
     const guests = await GuestUser.find();
@@ -104,7 +141,6 @@ app.get('/api/admin/users/guest', async (req, res) => {
   }
 });
 
-// Get all lost items
 app.get('/api/admin/items/lost', async (req, res) => {
   try {
     const lostItems = await Item.find({ status: 'lost' }).sort({ date: -1 });
@@ -114,7 +150,6 @@ app.get('/api/admin/items/lost', async (req, res) => {
   }
 });
 
-// Get all found items
 app.get('/api/admin/items/found', async (req, res) => {
   try {
     const foundItems = await Item.find({ status: 'found' }).sort({ date: -1 });
