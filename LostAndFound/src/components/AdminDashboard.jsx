@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 const AdminDashboard = () => {
   const [collegeUsers, setCollegeUsers] = useState([]);
@@ -10,24 +10,28 @@ const AdminDashboard = () => {
   const [foundItems, setFoundItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [expandedUser, setExpandedUser] = useState(null);
+  const [expandedItem, setExpandedItem] = useState(null);
+
   const navigate = useNavigate();
 
-  // ✅ Fetch function
   const fetchData = async () => {
     try {
-      const [collegeRes, guestRes, lostRes, foundRes] = await Promise.all([
+      const [collegeRes, guestRes, itemsRes] = await Promise.all([
         fetch(`${BACKEND_URL}/api/admin/users/college`),
         fetch(`${BACKEND_URL}/api/admin/users/guest`),
-        fetch(`${BACKEND_URL}/api/admin/items/lost`),
-        fetch(`${BACKEND_URL}/api/admin/items/found`),
+        fetch(`${BACKEND_URL}/api/items`)
       ]);
 
-      const [collegeData, guestData, lostData, foundData] = await Promise.all([
+      const [collegeData, guestData, itemsData] = await Promise.all([
         collegeRes.json(),
         guestRes.json(),
-        lostRes.json(),
-        foundRes.json(),
+        itemsRes.json()
       ]);
+
+      // Filter lost and found from the combined item data
+      const lostData = itemsData.filter(item => item.status === 'lost');
+      const foundData = itemsData.filter(item => item.status === 'found');
 
       setCollegeUsers(collegeData);
       setGuestUsers(guestData);
@@ -40,22 +44,34 @@ const AdminDashboard = () => {
     }
   };
 
-  // ✅ useEffect for initial load & real-time updates
   useEffect(() => {
-    fetchData(); // initial fetch
-
-    const interval = setInterval(() => {
-      fetchData(); // refresh every 10 seconds
-    }, 10000);
-
-    return () => clearInterval(interval); // cleanup
+    fetchData();
+    const interval = setInterval(fetchData, 10000);
+    return () => clearInterval(interval);
   }, []);
+
+  const handleUserClick = (index, type) => {
+    if (expandedUser?.type === type && expandedUser.index === index) {
+      setExpandedUser(null);
+    } else {
+      setExpandedUser({ type, index });
+      setExpandedItem(null);
+    }
+  };
+
+  const handleItemClick = (index, type) => {
+    if (expandedItem?.type === type && expandedItem.index === index) {
+      setExpandedItem(null);
+    } else {
+      setExpandedItem({ type, index });
+      setExpandedUser(null);
+    }
+  };
 
   if (loading) return <p className="p-4 text-center text-lg">Loading dashboard...</p>;
 
   return (
     <div className="p-8 max-w-6xl mx-auto space-y-8">
-      {/* Header */}
       <div className="flex flex-col items-center space-y-4">
         <h1 className="text-3xl font-bold text-center">Admin Dashboard</h1>
         <button
@@ -66,41 +82,95 @@ const AdminDashboard = () => {
         </button>
       </div>
 
-      {/* Sections */}
       <div className="grid md:grid-cols-2 gap-6">
+        {/* College Users */}
         <Section
           title={`📘 College Users (${collegeUsers.length})`}
           data={collegeUsers}
-          renderItem={(user) => (
-            <div>{user.name} — <span className="text-gray-600">{user.email}</span></div>
+          renderItem={(user, idx) => (
+            <>
+              <div
+                className="cursor-pointer"
+                onClick={() => handleUserClick(idx, 'college')}
+                title="Click to view SR No and Branch"
+              >
+                {user.name} — <span className="text-gray-600">{user.email}</span>
+              </div>
+              {expandedUser?.type === 'college' && expandedUser.index === idx && (
+                <DetailsBox onClose={() => setExpandedUser(null)}>
+                  <p><strong>SR No:</strong> {user.srNo || 'N/A'}</p>
+                  <p><strong>Branch:</strong> {user.department || 'N/A'}</p>
+                </DetailsBox>
+              )}
+            </>
           )}
         />
 
+        {/* Guest Users */}
         <Section
           title={`👤 Guest Users (${guestUsers.length})`}
           data={guestUsers}
-          renderItem={(user) => (
-            <div>{user.mobile}</div>
+          renderItem={(user, idx) => (
+            <>
+              <div
+                className="cursor-pointer"
+                onClick={() => handleUserClick(idx, 'guest')}
+                title="Click to view mobile"
+              >
+                {user.mobile}
+              </div>
+              {expandedUser?.type === 'guest' && expandedUser.index === idx && (
+                <DetailsBox onClose={() => setExpandedUser(null)}>
+                  <p><strong>Mobile:</strong> {user.mobile || 'N/A'}</p>
+                </DetailsBox>
+              )}
+            </>
           )}
         />
 
+        {/* Lost Items */}
         <Section
           title={`📍 Lost Items (${lostItems.length})`}
           data={lostItems}
-          renderItem={(item) => (
-            <div>
-              <strong>{item.title}</strong> — <span className="text-gray-600">{item.description}</span>
-            </div>
+          renderItem={(item, idx) => (
+            <>
+              <div
+                className="cursor-pointer"
+                onClick={() => handleItemClick(idx, 'lost')}
+                title="Click to view contact and location"
+              >
+                <strong>{item.title}</strong> — <span className="text-gray-600">{item.description}</span>
+              </div>
+              {expandedItem?.type === 'lost' && expandedItem.index === idx && (
+                <DetailsBox onClose={() => setExpandedItem(null)}>
+                  <p><strong>Contact Info:</strong> {item.contactInfo || 'N/A'}</p>
+                  <p><strong>Location:</strong> {formatLocation(item.location)}</p>
+                </DetailsBox>
+              )}
+            </>
           )}
         />
 
+        {/* Found Items */}
         <Section
           title={`🎒 Found Items (${foundItems.length})`}
           data={foundItems}
-          renderItem={(item) => (
-            <div>
-              <strong>{item.title}</strong> — <span className="text-gray-600">{item.description}</span>
-            </div>
+          renderItem={(item, idx) => (
+            <>
+              <div
+                className="cursor-pointer"
+                onClick={() => handleItemClick(idx, 'found')}
+                title="Click to view contact and location"
+              >
+                <strong>{item.title}</strong> — <span className="text-gray-600">{item.description}</span>
+              </div>
+              {expandedItem?.type === 'found' && expandedItem.index === idx && (
+                <DetailsBox onClose={() => setExpandedItem(null)}>
+                  <p><strong>Contact Info:</strong> {item.contactInfo || 'N/A'}</p>
+                  <p><strong>Location:</strong> {formatLocation(item.location)}</p>
+                </DetailsBox>
+              )}
+            </>
           )}
         />
       </div>
@@ -108,7 +178,32 @@ const AdminDashboard = () => {
   );
 };
 
-// ✅ Reusable Card Section Component
+// Formats a location object or string for display
+const formatLocation = (location) => {
+  if (!location) return 'N/A';
+  if (typeof location === 'string') return location;
+  if (typeof location === 'object') {
+    const { description, lat, lng } = location;
+    return `${description || 'Unknown'} (${lat}, ${lng})`;
+  }
+  return 'N/A';
+};
+
+// Reusable details box
+const DetailsBox = ({ children, onClose }) => (
+  <div className="mt-2 p-3 bg-blue-50 border border-blue-300 rounded relative text-sm text-blue-900">
+    <button
+      onClick={onClose}
+      className="absolute top-1 right-2 text-blue-700 hover:text-blue-900 font-bold"
+      aria-label="Close details"
+    >
+      &times;
+    </button>
+    {children}
+  </div>
+);
+
+// Section wrapper
 const Section = ({ title, data, renderItem }) => (
   <div className="bg-white rounded-lg shadow p-6 border border-gray-200 hover:shadow-md transition">
     <h2 className="text-xl font-semibold mb-4">{title}</h2>
@@ -116,7 +211,7 @@ const Section = ({ title, data, renderItem }) => (
       {data.length > 0 ? (
         data.map((item, idx) => (
           <li key={idx} className="bg-gray-50 p-3 rounded hover:bg-gray-100">
-            {renderItem(item)}
+            {renderItem(item, idx)}
           </li>
         ))
       ) : (
