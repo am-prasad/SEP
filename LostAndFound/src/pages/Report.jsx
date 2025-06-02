@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Form, FormItem, FormLabel, FormMessage, FormControl } from '@/components/ui/form';
 import { useItems } from '@/context/ItemsContext';
-
-
-
-
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -25,38 +23,27 @@ const formSchema = z.object({
   description: z.string().min(10),
   category: z.enum(['electronics', 'clothing', 'accessories', 'documents', 'keys', 'other']),
   status: z.enum(['lost', 'found']),
-  imageUrl: z.string().min(1, "Image is required"),
+  imageUrl: z.string().min(1, { message: 'Image is required' }),
   contactInfo: z.string().email(),
   location: z.object({
     lat: z.number(),
     lng: z.number(),
     description: z.string().optional()
-  }),
-  userType: z.enum(['college', 'guest', 'none']).optional(),
-  srNumber: z.string().optional(),
-  password: z.string().optional(),
-  guestPhone: z.string().optional(),
+  })
 });
 
-// Mock async validation for SR Number and Password
-async function validateSrNumberPassword(srNumber, password) {
-  await new Promise(r => setTimeout(r, 700));
-  // Replace with real validation logic. For demo, accept these:
-  return srNumber === 'SR123' && password === 'pass123';
-}
-
-// Validate guest phone (simple digit check, 10 digits)
-function validateGuestPhone(phone) {
-  return /^\d{10}$/.test(phone);
-}
+const mockVerifyCollegeUser = async (srNumber, password) => {
+  return srNumber === 'SR123' && password === 'Password123';
+};
 
 const Report = () => {
   const { items, addItem } = useItems();
   const navigate = useNavigate();
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [srValidationError, setSrValidationError] = useState('');
-  const [guestPhoneError, setGuestPhoneError] = useState('');
+  const [authType, setAuthType] = useState('');
+  const [srNumber, setSrNumber] = useState('');
+  const [srPassword, setSrPassword] = useState('');
 
   const lostItems = items.filter(item => item.status === 'lost' && !item.isResolved);
 
@@ -69,91 +56,49 @@ const Report = () => {
       status: 'lost',
       contactInfo: '',
       imageUrl: '',
-      location: { lat: 0, lng: 0, description: '' },
-      userType: 'none',
-      srNumber: '',
-      password: '',
-      guestPhone: '',
+      location: {
+        lat: 0,
+        lng: 0,
+        description: ''
+      }
     }
   });
 
   const status = form.watch('status');
-  const userType = form.watch('userType');
 
   const onLocationSelect = (location) => {
     setSelectedLocation(location);
     form.setValue('location', location);
   };
 
-  const handleImageUpload = (e) => {
-    if (e.target.files?.length) {
-      // Keep your existing upload logic or placeholder URL
-      const imageUrl = "https://images.unsplash.com/photo-1622560481153-02f36932d31b";
-      form.setValue('imageUrl', imageUrl);
-    }
-  };
-
   const onSubmit = async (data) => {
-    setSrValidationError('');
-    setGuestPhoneError('');
-
-    if (!selectedLocation) {
-      alert('Please select a location on the map.');
-      return;
-    }
-    if (!data.imageUrl) {
-      alert('Please upload an image.');
-      return;
-    }
-
-    if (data.status === 'found') {
-      if (data.userType === 'none') {
-        alert('Please select user type.');
-        return;
-      }
-
-      if (data.userType === 'college') {
-        if (!data.srNumber || !data.password) {
-          alert('Please enter SR Number and Password.');
-          return;
-        }
-        setIsSubmitting(true);
-        const valid = await validateSrNumberPassword(data.srNumber, data.password);
-        setIsSubmitting(false);
-
-        if (!valid) {
-          setSrValidationError('Invalid SR Number or Password.');
-          return;
-        }
-      }
-
-      if (data.userType === 'guest') {
-        if (!data.guestPhone) {
-          setGuestPhoneError('Please enter your phone number.');
-          return;
-        }
-        if (!validateGuestPhone(data.guestPhone)) {
-          setGuestPhoneError('Phone number must be 10 digits.');
-          return;
-        }
-      }
-    }
-
+    if (!selectedLocation) return;
     setIsSubmitting(true);
 
     try {
+      if (data.status === 'found') {
+        if (authType === 'college') {
+          const isValid = await mockVerifyCollegeUser(srNumber, srPassword);
+          if (!isValid) {
+            alert('Invalid SR number or password');
+            setIsSubmitting(false);
+            return;
+          }
+        } else if (authType === '') {
+          alert('Please verify whether you are a college or guest user');
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       const reportItem = {
         title: data.title,
         description: data.description,
         category: data.category,
         status: data.status,
-        location: {
-          lat: data.location.lat,
-          lng: data.location.lng,
-          description: data.location.description || ''
-        },
+        location: data.location,
         date: new Date().toISOString(),
-        reportedBy: (data.userType === 'college' ? `College User (${data.srNumber})` : data.userType === 'guest' ? `Guest User (${data.guestPhone})` : 'Anonymous User'),
+        reportedBy: 'Anonymous User',
         contactInfo: data.contactInfo,
         imageUrl: data.imageUrl,
         isResolved: false
@@ -164,7 +109,7 @@ const Report = () => {
           item => item.status === 'lost' && item.title === data.title && !item.isResolved
         );
         if (matchingLostItem) {
-          matchingLostItem.isResolved = true; // Note: ideally update in context with a setter
+          matchingLostItem.isResolved = true;
         }
       }
 
@@ -174,6 +119,13 @@ const Report = () => {
       console.error('Error submitting report:', error);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleImageUpload = (e) => {
+    if (e.target.files?.length) {
+      const imageUrl = 'https://images.unsplash.com/photo-1622560481153-02f36932d31b';
+      form.setValue('imageUrl', imageUrl);
     }
   };
 
@@ -188,64 +140,117 @@ const Report = () => {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-3xl w-full">
           <Card>
             <CardContent className="pt-6">
-              <FormItem className="mb-6">
-                <FormLabel>What are you reporting?</FormLabel>
-                <FormControl>
-                  <RadioGroup
-                    onValueChange={val => form.setValue('status', val)}
-                    value={form.getValues('status')}
-                    className="flex space-x-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="lost" id="lost" />
-                      <label htmlFor="lost" className="font-medium cursor-pointer">I lost an item</label>
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem className="mb-6">
+                    <FormLabel>What are you reporting?</FormLabel>
+                    <FormControl>
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className="flex space-x-4"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="lost" id="lost" />
+                          <label htmlFor="lost" className="font-medium cursor-pointer">
+                            I lost an item
+                          </label>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <RadioGroupItem value="found" id="found" />
+                          <label htmlFor="found" className="font-medium cursor-pointer">
+                            I found an item
+                          </label>
+                        </div>
+                      </RadioGroup>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {status === 'found' && (
+                <div className="mb-4">
+                  <p className="font-medium mb-2">Are you a:</p>
+                  <div className="flex gap-4">
+                    <Button type="button" variant="outline" onClick={() => setAuthType('college')}>
+                      College User
+                    </Button>
+                    <Button type="button" variant="outline" onClick={() => navigate('/guest-register')}>
+                      Guest User
+                    </Button>
+                  </div>
+                  {authType === 'college' && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Input
+                        placeholder="SR Number"
+                        value={srNumber}
+                        onChange={(e) => setSrNumber(e.target.value)}
+                      />
+                      <Input
+                        placeholder="Password"
+                        type="password"
+                        value={srPassword}
+                        onChange={(e) => setSrPassword(e.target.value)}
+                      />
                     </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="found" id="found" />
-                      <label htmlFor="found" className="font-medium cursor-pointer">I found an item</label>
-                    </div>
-                  </RadioGroup>
-                </FormControl>
-              </FormItem>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormItem>
-                  <FormLabel>{status === 'found' ? 'Select Lost Item Name' : 'Item Name'}</FormLabel>
-                  <Controller
-                    name="title"
-                    control={form.control}
-                    render={({ field }) => (
-                      status === 'found' ? (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select lost item" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {lostItems.length === 0 ? (
-                              <SelectItem value="no-items" disabled>No unresolved lost items</SelectItem>
-                            ) : lostItems.map(item => (
-                              <SelectItem key={item.id} value={item.title}>
-                                {item.category} - {item.title}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input placeholder="E.g., Blue Water Bottle" {...field} />
-                      )
-                    )}
-                  />
-                  <FormMessage>{form.formState.errors.title?.message}</FormMessage>
-                </FormItem>
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => {
+                    if (status === 'found') {
+                      return (
+                        <FormItem>
+                          <FormLabel>Select Lost Item Name</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select lost item" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {lostItems.length === 0 ? (
+                                <SelectItem value="no-items" disabled>
+                                  No unresolved lost items
+                                </SelectItem>
+                              ) : (
+                                lostItems.map((item) => (
+                                  <SelectItem key={item.id} value={item.title}>
+                                    {item.category} - {item.title}
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }
+                    return (
+                      <FormItem>
+                        <FormLabel>Item Name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="E.g., Blue Water Bottle" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
 
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Controller
-                    name="category"
-                    control={form.control}
-                    render={({ field }) => (
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -261,125 +266,119 @@ const Report = () => {
                           <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
-                    )}
-                  />
-                  <FormMessage>{form.formState.errors.category?.message}</FormMessage>
-                </FormItem>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <FormItem className="mt-6">
-                <FormLabel>Description</FormLabel>
-                <Controller
-                  name="description"
-                  control={form.control}
-                  render={({ field }) => (
-                    <Textarea placeholder="Describe the item..." {...field} />
-                  )}
-                />
-                <FormMessage>{form.formState.errors.description?.message}</FormMessage>
-              </FormItem>
-
-              <FormItem className="mt-6">
-                <FormLabel>Upload an Image</FormLabel>
-                <input type="file" accept="image/*" onChange={handleImageUpload} />
-                {form.formState.errors.imageUrl && (
-                  <p className="text-red-600 text-sm mt-1">{form.formState.errors.imageUrl.message}</p>
-                )}
-              </FormItem>
-
-              <FormItem className="mt-6">
-                <FormLabel>Location (Click on map to select)</FormLabel>
-                <MapSelector onLocationSelect={onLocationSelect} />
-                {selectedLocation && (
-                  <p className="mt-2 text-sm text-gray-600">
-                    Selected: Lat {selectedLocation.lat.toFixed(4)}, Lng {selectedLocation.lng.toFixed(4)}
-                  </p>
-                )}
-              </FormItem>
-
-              <FormItem className="mt-6">
-                <FormLabel>Contact Email</FormLabel>
-                <Controller
-                  name="contactInfo"
-                  control={form.control}
-                  render={({ field }) => <Input type="email" placeholder="your@email.com" {...field} />}
-                />
-                <FormMessage>{form.formState.errors.contactInfo?.message}</FormMessage>
-              </FormItem>
-
-              {/* Show extra fields only if status is 'found' */}
-              {status === 'found' && (
-                <>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
                   <FormItem className="mt-6">
-                    <FormLabel>User Type</FormLabel>
-                    <Controller
-                      name="userType"
-                      control={form.control}
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select user type" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="college">College User</SelectItem>
-                            <SelectItem value="guest">Guest User</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Describe the item with any identifying features..."
+                        className="min-h-32"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
                   </FormItem>
-
-                  {/* College user SR Number and Password */}
-                  {userType === 'college' && (
-                    <>
-                      <FormItem>
-                        <FormLabel>SR Number</FormLabel>
-                        <Controller
-                          name="srNumber"
-                          control={form.control}
-                          render={({ field }) => <Input placeholder="Enter SR Number" {...field} />}
-                        />
-                      </FormItem>
-                      <FormItem>
-                        <FormLabel>Password</FormLabel>
-                        <Controller
-                          name="password"
-                          control={form.control}
-                          render={({ field }) => <Input type="password" placeholder="Enter Password" {...field} />}
-                        />
-                      </FormItem>
-                      {srValidationError && (
-                        <p className="text-red-600 text-sm mt-1">{srValidationError}</p>
-                      )}
-                    </>
-                  )}
-
-                  {/* Guest user Phone Number */}
-                  {userType === 'guest' && (
-                    <>
-                      <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
-                        <Controller
-                          name="guestPhone"
-                          control={form.control}
-                          render={({ field }) => <Input placeholder="10-digit phone number" {...field} />}
-                        />
-                      </FormItem>
-                      {guestPhoneError && (
-                        <p className="text-red-600 text-sm mt-1">{guestPhoneError}</p>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-
-              <Button type="submit" disabled={isSubmitting} className="mt-6 w-full">
-                {isSubmitting ? 'Submitting...' : 'Submit Report'}
-              </Button>
+                )}
+              />
             </CardContent>
           </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-medium mb-4">Item Image</h3>
+              <div className="mb-4 flex items-center gap-4">
+                <div className="flex-1">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="cursor-pointer"
+                    id="image-upload"
+                  />
+                </div>
+                <div className="flex-shrink-0">
+                  <label htmlFor="image-upload">
+                    <Button type="button" variant="outline">
+                      <Upload className="h-4 w-4 mr-2" /> Upload
+                    </Button>
+                  </label>
+                </div>
+              </div>
+
+              {form.watch('imageUrl') && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground">Image preview:</p>
+                  <img
+                    src={form.watch('imageUrl')}
+                    alt="Item preview"
+                    className="max-h-60 w-full object-cover mt-2 rounded-md"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <h3 className="text-lg font-medium mb-4 flex items-center">
+                <MapPin className="h-5 w-5 mr-2" /> Location Information
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Select the location where you lost or found the item on the map
+              </p>
+              <div className="h-80 mb-4 border rounded-md overflow-hidden">
+                <MapSelector onLocationSelect={onLocationSelect} />
+              </div>
+              {selectedLocation && (
+                <div className="bg-accent p-3 rounded-md text-sm">
+                  <p>Selected location: {selectedLocation.description || 'Custom location'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Coordinates: {selectedLocation.lat.toFixed(6)}, {selectedLocation.lng.toFixed(6)}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <FormField
+                control={form.control}
+                name="contactInfo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contact Email</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="email"
+                        placeholder="abc123@xyz.com"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end space-x-4">
+            <Button type="button" variant="outline" onClick={() => navigate(-1)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting || !selectedLocation}>
+              Submit Report
+            </Button>
+          </div>
         </form>
       </Form>
     </div>
