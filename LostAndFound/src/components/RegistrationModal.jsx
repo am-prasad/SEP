@@ -24,12 +24,13 @@ const branches = [
 
 const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.?/~`]).{8,}$/;
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL ;
 
 const ADMIN_CREDENTIALS = {
-  id: 'sjce',
-  password: 'jssstu',
+  id: import.meta.env.VITE_CAMPOFOUND_ADMIN_ID,
+  password: import.meta.env.VITE_CAMPOFOUND_ADMIN_PASSWORD,
 };
+
 
 const RegistrationModal = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
