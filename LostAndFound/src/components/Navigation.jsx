@@ -28,7 +28,7 @@ const NavLink = ({ to, icon, label, isActive, onClick }) => {
 
 const Navigation = ({ currentPath }) => {
   const isMobile = useIsMobile();
-  const [modalOpen, setModalOpen] = useState(false);
+  const [registrationModalOpen, setRegistrationModalOpen] = useState(false);
 
   return (
     <>
@@ -69,6 +69,8 @@ const Navigation = ({ currentPath }) => {
                 Report Item
               </Link>
             </Button>
+
+            {/* Register Link opens modal */}
             <NavLink 
               to="#"
               icon={<User className="h-5 w-5" />}
@@ -76,7 +78,7 @@ const Navigation = ({ currentPath }) => {
               isActive={false}
               onClick={(e) => {
                 e.preventDefault();
-                setModalOpen(true);
+                setRegistrationModalOpen(true);
               }}
             />
           </nav>
@@ -115,14 +117,17 @@ const Navigation = ({ currentPath }) => {
             isActive={false}
             onClick={(e) => {
               e.preventDefault();
-              setModalOpen(true);
+              setRegistrationModalOpen(true);
             }}
           />
         </nav>
       </header>
 
       {/* Registration Modal */}
-      <RegistrationModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+      <RegistrationModal 
+        isOpen={registrationModalOpen} 
+        onClose={() => setRegistrationModalOpen(false)} 
+      />
     </>
   );
 };

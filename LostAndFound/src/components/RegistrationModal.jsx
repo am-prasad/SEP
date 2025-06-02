@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useNavigate } from 'react-router-dom';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -19,7 +26,14 @@ const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+={}[\]|\\:;"'<>,.
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
 
+const ADMIN_CREDENTIALS = {
+  id: 'sjce',
+  password: 'jssstu',
+};
+
 const RegistrationModal = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
+
   const [form, setForm] = useState({
     srNo: '',
     name: '',
@@ -30,6 +44,8 @@ const RegistrationModal = ({ isOpen, onClose }) => {
     confirmPassword: '',
     guestMobile: '',
     otp: '',
+    adminId: '',
+    adminPassword: '',
   });
 
   const [errors, setErrors] = useState({});
@@ -53,7 +69,7 @@ const RegistrationModal = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (name === 'password' || name === 'confirmPassword') {
+    if (name === 'password' || name === 'confirmPassword' || name === 'adminPassword') {
       if (!/\s/.test(value)) {
         setForm((prev) => ({ ...prev, [name]: value }));
       }
@@ -127,6 +143,7 @@ const RegistrationModal = ({ isOpen, onClose }) => {
       if (res.ok) {
         alert('Registered successfully');
         onClose();
+        resetForm();
       } else {
         alert(data.message || 'Registration failed');
       }
@@ -174,6 +191,7 @@ const RegistrationModal = ({ isOpen, onClose }) => {
       if (res.ok) {
         alert('Guest verified successfully');
         onClose();
+        resetForm();
       } else {
         alert(data.message || 'Invalid OTP');
       }
@@ -183,13 +201,55 @@ const RegistrationModal = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleAdminSubmit = (e) => {
+    e.preventDefault();
+    let tempErrors = {};
+    if (!form.adminId.trim()) tempErrors.adminId = 'Admin ID is required';
+    if (!form.adminPassword) tempErrors.adminPassword = 'Password is required';
+
+    if (Object.keys(tempErrors).length > 0) {
+      setErrors(tempErrors);
+      return;
+    }
+
+    if (
+      form.adminId === ADMIN_CREDENTIALS.id &&
+      form.adminPassword === ADMIN_CREDENTIALS.password
+    ) {
+      alert('Admin login successful');
+      onClose();
+      resetForm();
+      navigate('/admin/dashboard');  // Redirect after successful admin login
+    } else {
+      alert('Invalid admin credentials');
+    }
+  };
+
+  const resetForm = () => {
+    setForm({
+      srNo: '',
+      name: '',
+      email: '',
+      mobile: '',
+      department: '',
+      password: '',
+      confirmPassword: '',
+      guestMobile: '',
+      otp: '',
+      adminId: '',
+      adminPassword: '',
+    });
+    setErrors({});
+    setOtpSent(false);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={() => { onClose(); resetForm(); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>User Registration</DialogTitle>
+          <DialogTitle>User Registration / Admin Login</DialogTitle>
           <DialogDescription>
-            Please register by filling the form below or verifying your mobile number if you are a guest.
+            Please register by filling the form below, verifying your mobile if you are a guest, or login as admin.
           </DialogDescription>
         </DialogHeader>
 
@@ -199,19 +259,14 @@ const RegistrationModal = ({ isOpen, onClose }) => {
             setTab(value);
             setErrors({});
             setOtpSent(false);
-            setForm((prev) => ({
-              ...prev,
-              otp: '',
-              guestMobile: '',
-              password: '',
-              confirmPassword: '',
-            }));
+            resetForm();
           }}
           className="w-full"
         >
-          <TabsList className="grid grid-cols-2 mb-4">
+          <TabsList className="grid grid-cols-3 mb-4">
             <TabsTrigger value="college">College People</TabsTrigger>
             <TabsTrigger value="guest">Guest</TabsTrigger>
+            <TabsTrigger value="admin">Admin Login</TabsTrigger>
           </TabsList>
 
           {/* College Registration */}
@@ -366,6 +421,42 @@ const RegistrationModal = ({ isOpen, onClose }) => {
                   </Button>
                 </>
               )}
+            </div>
+          </TabsContent>
+
+          {/* Admin Login */}
+          <TabsContent value="admin">
+            <div className="max-h-[40vh] overflow-y-auto pr-2">
+              <form onSubmit={handleAdminSubmit} className="space-y-4">
+                <div>
+                  <Label>Admin ID</Label>
+                  <Input
+                    required
+                    name="adminId"
+                    value={form.adminId}
+                    onChange={handleChange}
+                    autoComplete="off"
+                  />
+                  {errors.adminId && <p className="text-red-600 text-sm mt-1">{errors.adminId}</p>}
+                </div>
+
+                <div>
+                  <Label>Password</Label>
+                  <Input
+                    required
+                    name="adminPassword"
+                    type="password"
+                    value={form.adminPassword}
+                    onChange={handleChange}
+                    autoComplete="current-password"
+                  />
+                  {errors.adminPassword && <p className="text-red-600 text-sm mt-1">{errors.adminPassword}</p>}
+                </div>
+
+                <Button type="submit" className="w-full mt-4">
+                  Login as Admin
+                </Button>
+              </form>
             </div>
           </TabsContent>
         </Tabs>
