@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
 
 const ItemsContext = createContext(undefined);
-const API_BASE_URL = 'http://localhost:3000/api/items';
+const API_BASE_URL = 'http://localhost:5000/api/items';
 
 export const useItems = () => {
   const context = useContext(ItemsContext);

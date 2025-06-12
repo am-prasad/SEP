@@ -2,31 +2,30 @@ import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import bcrypt from 'bcrypt'; // Needed for password comparison
-dotenv.config();
+import bcrypt from 'bcrypt';
 
-// Import controller functions
 import {
   registerCollegeUser,
   sendGuestOtp,
   verifyGuestOtp,
 } from './controllers/registerController.js';
 
-// Import Mongoose models
 import CollegeUser from './models/CollegeUser.js';
 import GuestUser from './models/GuestUser.js';
 
-// Initialize Express app
+dotenv.config();
+
 const app = express();
 app.use(express.json());
 app.use(cors());
 
 // Connect to MongoDB
-mongoose.connect('mongodb://127.0.0.1:27017/lostandfound')
+mongoose
+  .connect('mongodb://127.0.0.1:27017/lostandfound')
   .then(() => console.log('✅ MongoDB connected'))
   .catch((err) => console.error('❌ MongoDB connection failed:', err));
 
-// Define Item schema & model
+// Item schema
 const itemSchema = new mongoose.Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
@@ -50,14 +49,12 @@ const itemSchema = new mongoose.Schema({
 
 const Item = mongoose.model('Item', itemSchema);
 
-// --- ROUTES ---
-
-// Root check
+// Root
 app.get('/', (req, res) => {
   res.send('Welcome to Lost & Found API');
 });
 
-// 📦 Items
+// Items routes
 app.get('/api/items', async (req, res) => {
   try {
     const items = await Item.find().sort({ date: -1 });
@@ -78,14 +75,12 @@ app.post('/api/items', async (req, res) => {
   }
 });
 
-// 🧑‍🎓 Registration + OTP
+// Registration and OTP
 app.post('/api/register/college', registerCollegeUser);
 app.post('/api/register/guest/send-otp', sendGuestOtp);
 app.post('/api/register/guest/verify-otp', verifyGuestOtp);
 
-// ✅ IDENTITY VERIFICATION ROUTES
-
-// College user verification
+// Identity verification
 app.post('/api/verify/college', async (req, res) => {
   const { srNo, password } = req.body;
 
@@ -106,7 +101,6 @@ app.post('/api/verify/college', async (req, res) => {
   }
 });
 
-// Guest user verification
 app.post('/api/verify/guest', async (req, res) => {
   const { mobile } = req.body;
 
@@ -122,7 +116,7 @@ app.post('/api/verify/guest', async (req, res) => {
   }
 });
 
-// 🔐 Admin Endpoints
+// Admin endpoints
 app.get('/api/admin/users/college', async (req, res) => {
   try {
     const users = await CollegeUser.find();
@@ -159,8 +153,8 @@ app.get('/api/admin/items/found', async (req, res) => {
   }
 });
 
-// ✅ Start Server
-const PORT = process.env.PORT || 3000;
+// Start server
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server is running at http://localhost:${PORT}`);
 });
