@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { HomeIcon, Search, MapPin, Plus, User } from 'lucide-react';
+import { HomeIcon, Search, MapPin, Plus, User, Sun, Moon } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from '@/hooks/use-mobile';
 import RegistrationModal from '@/components/RegistrationModal';
+import { useTheme } from 'next-themes';
 
 const NavLink = ({ to, icon, label, isActive, onClick }) => {
   const isMobile = useIsMobile();
@@ -26,6 +27,42 @@ const NavLink = ({ to, icon, label, isActive, onClick }) => {
   );
 };
 
+const ThemeToggle = () => {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+
+  const isDark = theme === 'dark';
+
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      className="transition-all duration-300 ease-in-out"
+    >
+      <span className="sr-only">Toggle Theme</span>
+      <div className="relative h-5 w-5">
+        <Sun
+          className={cn(
+            "absolute inset-0 h-5 w-5 transition-opacity duration-300",
+            isDark ? "opacity-100 rotate-0" : "opacity-0 -rotate-90"
+          )}
+        />
+        <Moon
+          className={cn(
+            "absolute inset-0 h-5 w-5 transition-opacity duration-300",
+            isDark ? "opacity-0 rotate-90" : "opacity-100 rotate-0"
+          )}
+        />
+      </div>
+    </Button>
+  );
+};
+
+
 const Navigation = ({ currentPath }) => {
   const isMobile = useIsMobile();
   const [registrationModalOpen, setRegistrationModalOpen] = useState(false);
@@ -42,46 +79,50 @@ const Navigation = ({ currentPath }) => {
               <span className={cn(isMobile ? "sr-only" : "")}>Campus Lost and Found</span>
             </Link>
           </div>
-          
-          {/* Desktop Navigation */}
-          <nav className="hidden sm:flex items-center flex-wrap gap-4">
-            <NavLink 
-              to="/" 
-              icon={<HomeIcon className="h-5 w-5" />} 
-              label="Home"
-              isActive={currentPath === '/'} 
-            />
-            <NavLink 
-              to="/browse" 
-              icon={<Search className="h-5 w-5" />} 
-              label="Browse Items"
-              isActive={currentPath === '/browse'} 
-            />
-            <NavLink 
-              to="/map" 
-              icon={<MapPin className="h-5 w-5" />} 
-              label="Map View" 
-              isActive={currentPath === '/map'}
-            />
-            <Button asChild size="sm" className="ml-2">
-              <Link to="/report">
-                <Plus className="h-4 w-4 mr-1" />
-                Report Item
-              </Link>
-            </Button>
 
-            {/* Register Link opens modal */}
-            <NavLink 
-              to="#"
-              icon={<User className="h-5 w-5" />}
-              label="Register"
-              isActive={false}
-              onClick={(e) => {
-                e.preventDefault();
-                setRegistrationModalOpen(true);
-              }}
-            />
-          </nav>
+          {/* Right Nav + Theme Toggle */}
+          <div className="flex items-center gap-4">
+            {/* Desktop Navigation */}
+            <nav className="hidden sm:flex items-center flex-wrap gap-4">
+              <NavLink 
+                to="/" 
+                icon={<HomeIcon className="h-5 w-5" />} 
+                label="Home"
+                isActive={currentPath === '/'} 
+              />
+              <NavLink 
+                to="/browse" 
+                icon={<Search className="h-5 w-5" />} 
+                label="Browse Items"
+                isActive={currentPath === '/browse'} 
+              />
+              <NavLink 
+                to="/map" 
+                icon={<MapPin className="h-5 w-5" />} 
+                label="Map View" 
+                isActive={currentPath === '/map'}
+              />
+              <Button asChild size="sm" className="ml-2">
+                <Link to="/report">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Report Item
+                </Link>
+              </Button>
+              <NavLink 
+                to="#"
+                icon={<User className="h-5 w-5" />}
+                label="Register"
+                isActive={false}
+                onClick={(e) => {
+                  e.preventDefault();
+                  setRegistrationModalOpen(true);
+                }}
+              />
+            </nav>
+
+            {/* Theme Toggle Button */}
+            <ThemeToggle />
+          </div>
         </div>
 
         {/* Mobile Navigation */}
