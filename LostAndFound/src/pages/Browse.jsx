@@ -96,6 +96,7 @@ const Browse = () => {
                     className="pl-8"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Search items"
                   />
                 </div>
               </div>
@@ -114,7 +115,7 @@ const Browse = () => {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="border rounded-lg p-4">
+              <div key={`loading-skeleton-${i}`} className="border rounded-lg p-4">
                 <Skeleton className="h-[200px] w-full rounded-md mb-4" />
                 <Skeleton className="h-6 w-3/4 mb-2" />
                 <Skeleton className="h-4 w-1/2 mb-2" />
@@ -132,8 +133,9 @@ const Browse = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredItems.map((item) => (
-              <ItemCard key={item.id} item={item} />
+            {filteredItems.map((item, index) => (
+              // Use item.id if exists, otherwise fallback to index to avoid React warnings
+              <ItemCard key={item.id ?? index} item={item} />
             ))}
           </div>
         )}
