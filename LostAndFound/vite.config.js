@@ -11,7 +11,7 @@ export default defineConfig({
   },
   server: {
     // ⬇️ allow requests coming from your Render URL
-    allowedHosts: ['sep-3ivv.onrender.com','japh.aximp.com'],
+    allowedHosts: ['sep-3ivv.onrender.com','japh.aximp.com','https://campofound.netlify.app/'],
     // If you ever need to allow everything during local testing:
     // allowedHosts: 'all',
   },
