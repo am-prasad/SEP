@@ -1,0 +1,108 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+:root {
+  /* Base */
+  --background: 78 67.7% 90.7%;
+  --foreground: 230 15% 15%;
+
+  /* Surfaces */
+  --card: 0 0% 100%;
+  --card-foreground: 230 15% 15%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 230 15% 15%;
+
+  /* Brand Primary - Deep Sky Blue */
+  --primary: 200 23% 40%;
+  --primary-foreground: 0 0% 100%;
+
+  /* Secondary - Warm Amber */
+  --secondary: 38 92% 50%;
+  --secondary-foreground: 230 15% 15%;
+
+  /* Muted - Light Slate */
+  --muted: 220 16% 96%;
+  --muted-foreground: 225 10% 40%;
+
+  /* Accent - Soft Indigo */
+  --accent: 248 100% 97%;
+  --accent-foreground: 248 40% 40%;
+
+  /* Destructive - Soft Red */
+  --destructive: 0 80% 58%;
+  --destructive-foreground: 0 0% 100%;
+
+  /* Border and Input */
+  --border: 0 0% 0%;
+  --input: 220 14% 90%;
+  --ring: 207 90% 54%;
+
+  --radius: 0.5rem;
+
+  /* Sidebar */
+  --sidebar-background: 0 0% 98%;
+  --sidebar-foreground: 230 15% 15%;
+  --sidebar-primary: 210 15% 20%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 220 13% 93%;
+  --sidebar-accent-foreground: 230 15% 15%;
+  --sidebar-border: 220 14% 90%;
+  --sidebar-ring: 207 90% 54%;
+}
+
+.dark {
+  --background: 230 15% 10%;
+  --foreground: 0 0% 98%;
+
+  --card: 230 15% 12%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 230 15% 12%;
+  --popover-foreground: 0 0% 98%;
+
+  --primary: 207 90% 65%;
+  --primary-foreground: 230 15% 15%;
+
+  --secondary: 38 92% 60%;
+  --secondary-foreground: 230 15% 15%;
+
+  --muted: 230 15% 20%;
+  --muted-foreground: 225 10% 70%;
+
+  --accent: 248 80% 30%;
+  --accent-foreground: 0 0% 98%;
+
+  --destructive: 0 70% 45%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 230 15% 25%;
+  --input: 230 15% 25%;
+  --ring: 207 90% 65%;
+}
+
+}
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .item-card {
+    @apply bg-white rounded-lg shadow-md transition-all duration-300 hover:shadow-lg;
+  }
+
+  .card-hover {
+    @apply hover:-translate-y-1 transition-all duration-300;
+  }
+}
