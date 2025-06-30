@@ -16,5 +16,6 @@ export default defineConfig({
     host: 0.0.0.0,
     proxy: { '/api': 'http://localhost:5000'},
     // If you need to restrict hosts in prod, keep allowedHosts – fine.
+    allowedHosts: ['sep-3ivv.onrender.com','japh.aximp.com','campofound.netlify.app'],
   },
 });
