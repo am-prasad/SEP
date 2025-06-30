@@ -10,12 +10,15 @@ export default defineConfig({
       react: path.resolve(__dirname, 'node_modules/react'),
       'react-dom': path.resolve(__dirname, 'node_modules/react-dom'),
     },
-    dedupe: ['react', 'react-dom'],   // <- make sure only one copy is bundled
+    dedupe: ['react', 'react-dom'],
   },
   server: {
-    host: 0.0.0.0,
-    proxy: { '/api': 'http://localhost:5000'},
-    // If you need to restrict hosts in prod, keep allowedHosts – fine.
-    allowedHosts: ['sep-3ivv.onrender.com','japh.aximp.com','campofound.netlify.app'],
+    host: '0.0.0.0',       // Allows connections from LAN / internet
+    port: 5173,            // Optional; default is 5173
+    proxy: {
+      '/api': 'http://localhost:5000',
+    },
+    cors: true,            // ✅ Allow cross-origin access
+    // allowedHosts: ['...'] ❌ Not supported by Vite, remove it
   },
 });
