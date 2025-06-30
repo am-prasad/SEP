@@ -16,5 +16,6 @@ export default defineConfig({
     host: true,
     proxy: { '/api': 'http://localhost:5000' },
     // If you need to restrict hosts in prod, keep allowedHosts – fine.
+    allowedHosts: 'all',
   },
 });
