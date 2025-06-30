@@ -13,9 +13,8 @@ export default defineConfig({
     dedupe: ['react', 'react-dom'],   // <- make sure only one copy is bundled
   },
   server: {
-    host: true,
-    proxy: { '/api': 'http://localhost:5000' },
+    host: 0.0.0.0,
+    proxy: { '/api': 'http://localhost:5000'},
     // If you need to restrict hosts in prod, keep allowedHosts – fine.
-    allowedHosts: 'all',
   },
 });
