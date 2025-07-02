@@ -6,7 +6,13 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),  // <-- add this alias
+      '@': path.resolve(__dirname, 'src'), // alias for cleaner imports
     },
+  },
+  server: {
+    // ⬇️ allow requests coming from your Render URL
+    allowedHosts: ['sep-3ivv.onrender.com','japh.aximp.com','campofound.netlify.app'],
+    // If you ever need to allow everything during local testing:
+    // allowedHosts: 'all',
   },
 })
