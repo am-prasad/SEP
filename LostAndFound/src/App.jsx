@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "next-themes"; // <-- Import ThemeProvider
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import NotificationsPage from "./pages/NotificationsPage";
 
 import { ItemsProvider } from "./context/ItemsContext";
 import Layout from "./components/Layout";
@@ -39,6 +40,7 @@ const App = () => {
                   <Route path="/map" element={<MapView />} />
                   <Route path="/item/:id" element={<ItemDetails />} />
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>

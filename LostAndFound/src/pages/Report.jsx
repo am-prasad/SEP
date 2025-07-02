@@ -1,3 +1,4 @@
+// src/pages/Report.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -18,28 +19,30 @@ import { Card, CardContent } from '@/components/ui/card';
 import MapSelector from '@/components/MapSelector';
 
 const schema = z.object({
-  title: z.string().min(3).max(100),
-  description: z.string().min(10),
+  title: z.string().min(1, "Title is required"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
   category: z.enum(['electronics', 'clothing', 'accessories', 'documents', 'keys', 'other']),
   status: z.enum(['lost', 'found']),
-  imageUrl: z.string().min(1, { message: 'Image is required' }),
+  imageFile: z.any(),
   location: z.object({
     lat: z.number(),
     lng: z.number(),
     description: z.string().optional()
   }),
-  contactInfo: z.string().optional()
+  contactInfo: z.string().optional(),
 });
 
 const Report = () => {
-  const { items, addItem } = useItems();
+  const { items } = useItems();
   const navigate = useNavigate();
   const [selectedLocation, setSelectedLocation] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [authType, setAuthType] = useState('');
   const [srNumber, setSrNumber] = useState('');
   const [srPassword, setSrPassword] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
+  const [imageFile, setImageFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -49,7 +52,7 @@ const Report = () => {
       category: 'other',
       status: 'lost',
       contactInfo: '',
-      imageUrl: '',
+      imageFile: null,
       location: { lat: 0, lng: 0, description: '' }
     }
   });
@@ -62,105 +65,113 @@ const Report = () => {
     form.setValue('location', location);
   };
 
-const verifyCollegeUser = async () => {
-  try {
-    const res = await fetch('http://localhost:5000/api/verify/college', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ srNo: srNumber, password: srPassword }),
-    });
-
-    const data = await res.json(); // 💥 This line is the source of the error if response is empty
-
-    if (!res.ok) {
-      console.error('College verify failed:', data);
+  const verifyCollegeUser = async () => {
+    try {
+      const res = await fetch('http://localhost:5000/api/verify/college', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ srNo: srNumber, password: srPassword }),
+      });
+      const data = await res.json();
+      return res.ok ? data : null;
+    } catch {
       return null;
     }
-
-    return data;
-  } catch (err) {
-    console.error('College verify request error:', err);
-    return null;
-  }
-};
-
-
+  };
 
   const verifyGuestUser = async () => {
-    const res = await fetch('http://localhost:5000/api/guest/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mobile: guestPhone })
-    });
-    const data = await res.json();
-    return res.ok && data.verified;
+    try {
+      const res = await fetch('http://localhost:5000/api/verify/guest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mobile: guestPhone }),
+      });
+      const data = await res.json();
+      return res.ok && data.success;
+    } catch {
+      return false;
+    }
   };
 
   const onSubmit = async (data) => {
     if (!selectedLocation) return alert('Please select a location on the map.');
+    if (!imageFile) return alert('Please upload an image.');
 
     setIsSubmitting(true);
+
     try {
       if (data.status === 'found') {
         if (authType === 'college') {
           if (!srNumber || !srPassword) throw new Error('Missing SR number or password.');
           const valid = await verifyCollegeUser();
-          if (!valid) throw new Error('Invalid SR number or password.');
+          if (!valid) throw new Error('Invalid college credentials.');
           if (!data.contactInfo || !data.contactInfo.includes('@')) {
-            throw new Error('Provide a valid contact email.');
+            throw new Error('Valid contact email required.');
           }
         } else if (authType === 'guest') {
-          if (!guestPhone) throw new Error('Phone number is required.');
+          if (!guestPhone) throw new Error('Phone number required.');
           const valid = await verifyGuestUser();
-          if (!valid) throw new Error('Phone number not verified.');
+          if (!valid) throw new Error('Guest verification failed.');
           data.contactInfo = guestPhone;
         } else {
-          throw new Error('Select College or Guest verification.');
+          throw new Error('Choose college or guest verification.');
         }
       } else {
         if (!data.contactInfo || !data.contactInfo.includes('@')) {
-          throw new Error('Provide a valid contact email.');
+          throw new Error('Valid contact email required.');
         }
       }
 
-      const reportItem = {
-        ...data,
-        location: selectedLocation,
-        date: new Date().toISOString(),
-        reportedBy: 'Anonymous User',
-        isResolved: false
-      };
+      const formData = new FormData();
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('category', data.category);
+      formData.append('status', data.status);
+      formData.append('contactInfo', data.contactInfo || '');
+      formData.append('image', imageFile);
+      formData.append('location[lat]', selectedLocation.lat);
+      formData.append('location[lng]', selectedLocation.lng);
+      formData.append('location[description]', selectedLocation.description || '');
+      formData.append('reportedBy', 'Anonymous User');
+      formData.append('isResolved', 'false');
+      formData.append('date', new Date().toISOString());
 
-      if (data.status === 'found') {
-        const match = items.find(item => item.status === 'lost' && item.title === data.title && !item.isResolved);
-        if (match) match.isResolved = true;
-      }
+      const res = await fetch('http://localhost:5000/api/items', {
+        method: 'POST',
+        body: formData
+      });
 
-      await addItem(reportItem);
+      if (!res.ok) throw new Error('Failed to submit item');
+
       navigate('/browse');
-    } catch (error) {
-      alert(error.message);
+    } catch (err) {
+      alert(err.message);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleImageUpload = (e) => {
-    if (e.target.files?.length) {
-      const imageUrl = 'https://images.unsplash.com/photo-1622560481153-02f36932d31b';
-      form.setValue('imageUrl', imageUrl);
+    if (e.target.files?.[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      form.setValue('imageFile', file);
+      const reader = new FileReader();
+      reader.onloadend = () => setPreviewUrl(reader.result);
+      reader.readAsDataURL(file);
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen w-screen px-4 text-center">
+    <div className="flex flex-col items-center justify-center min-h-screen px-4 text-center">
       <h1 className="text-3xl font-bold mb-4">Report an Item</h1>
-      <p className="text-muted-foreground mb-6">Help lost items get back to their owner.</p>
+      <p className="text-muted-foreground mb-6">Help reunite lost items with their owners.</p>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 max-w-3xl w-full">
           <Card>
             <CardContent className="pt-6 space-y-6">
+              {/* Status */}
               <FormField
                 control={form.control}
                 name="status"
@@ -171,93 +182,103 @@ const verifyCollegeUser = async () => {
                       <RadioGroup onValueChange={field.onChange} value={field.value} className="flex space-x-4">
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="lost" id="lost" />
-                          <label htmlFor="lost" className="font-medium cursor-pointer">Lost</label>
+                          <label htmlFor="lost">Lost</label>
                         </div>
                         <div className="flex items-center space-x-2">
                           <RadioGroupItem value="found" id="found" />
-                          <label htmlFor="found" className="font-medium cursor-pointer">Found</label>
+                          <label htmlFor="found">Found</label>
                         </div>
                       </RadioGroup>
                     </FormControl>
-                    <FormMessage />
                   </FormItem>
                 )}
               />
 
+              {/* Verification */}
               {status === 'found' && (
-                <div>
-                  <p className="font-medium mb-2">Verify as:</p>
+                <>
+                  <p className="font-medium">Verify as:</p>
                   <div className="flex gap-4 mb-4">
-                    <Button type="button" variant={authType === 'college' ? 'default' : 'outline'} onClick={() => setAuthType('college')}>College User</Button>
-                    <Button type="button" variant={authType === 'guest' ? 'default' : 'outline'} onClick={() => setAuthType('guest')}>Guest User</Button>
+                    <Button
+                      type="button"
+                      variant={authType === 'college' ? 'default' : 'outline'}
+                      onClick={() => setAuthType('college')}
+                    >
+                      College User
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={authType === 'guest' ? 'default' : 'outline'}
+                      onClick={() => setAuthType('guest')}
+                    >
+                      Guest User
+                    </Button>
                   </div>
 
                   {authType === 'college' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Input placeholder="SR Number" value={srNumber} onChange={(e) => setSrNumber(e.target.value)} />
-                      <Input placeholder="Password" type="password" value={srPassword} onChange={(e) => setSrPassword(e.target.value)} />
+                      <Input type="password" placeholder="Password" value={srPassword} onChange={(e) => setSrPassword(e.target.value)} />
                     </div>
                   )}
-
                   {authType === 'guest' && (
-                    <Input placeholder="Phone Number (e.g. +1234567890)" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} />
+                    <Input placeholder="Phone Number" value={guestPhone} onChange={(e) => setGuestPhone(e.target.value)} />
                   )}
-                </div>
+                </>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                  control={form.control}
-                  name="title"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{status === 'found' ? 'Match Lost Item' : 'Item Title'}</FormLabel>
-                      <FormControl>
-                        {status === 'found' ? (
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <SelectTrigger><SelectValue placeholder="Select lost item" /></SelectTrigger>
-                            <SelectContent>
-                              {lostItems.length === 0 ? (
-                                <SelectItem value="no-items" disabled>No lost items</SelectItem>
-                              ) : (
-                                lostItems.map((item) => (
-                                  <SelectItem key={item.id} value={item.title}>{item.category} - {item.title}</SelectItem>
-                                ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <Input placeholder="Enter item title" {...field} />
-                        )}
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              {/* Title */}
+              <FormField
+                control={form.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Item Title</FormLabel>
+                    <FormControl>
+                      {status === 'found' ? (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select lost item title" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {lostItems.map((item) => (
+                              <SelectItem key={item._id} value={item.title}>
+                                {item.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input placeholder="Enter item title" {...field} />
+                      )}
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="category"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Category</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="electronics">Electronics</SelectItem>
-                          <SelectItem value="clothing">Clothing</SelectItem>
-                          <SelectItem value="accessories">Accessories</SelectItem>
-                          <SelectItem value="documents">Documents</SelectItem>
-                          <SelectItem value="keys">Keys</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              {/* Category */}
+              <FormField
+                control={form.control}
+                name="category"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Category</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="electronics">Electronics</SelectItem>
+                        <SelectItem value="clothing">Clothing</SelectItem>
+                        <SelectItem value="accessories">Accessories</SelectItem>
+                        <SelectItem value="documents">Documents</SelectItem>
+                        <SelectItem value="keys">Keys</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
 
+              {/* Description */}
               <FormField
                 control={form.control}
                 name="description"
@@ -265,37 +286,38 @@ const verifyCollegeUser = async () => {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Provide a detailed description" {...field} />
+                      <Textarea placeholder="Enter a detailed description" {...field} />
                     </FormControl>
-                    <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="imageUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Upload Image</FormLabel>
-                    <FormControl>
-                      <input type="file" accept="image/*" onChange={(e) => {
-                        handleImageUpload(e);
-                        field.onChange(e.target.files?.[0]?.name || '');
-                      }} required />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {/* Image Upload */}
+              <FormItem>
+                <FormLabel>Upload Image</FormLabel>
+                <FormControl>
+                  <div className="space-y-2">
+                    <Input type="file" accept="image/*" onChange={handleImageUpload} />
+                    {previewUrl && (
+                      <img
+                        src={previewUrl}
+                        alt="Preview"
+                        className="mt-2 w-48 h-auto border rounded shadow"
+                      />
+                    )}
+                  </div>
+                </FormControl>
+              </FormItem>
 
+              {/* Map Selector */}
               <div>
-                <FormLabel>Select Location on Map</FormLabel>
+                <FormLabel>Select Location</FormLabel>
                 <div className="h-[300px] w-full mt-2">
                   <MapSelector initialLocation={selectedLocation} onLocationSelect={onLocationSelect} />
                 </div>
               </div>
 
+              {/* Contact Info */}
               {(status === 'lost' || authType === 'college') && (
                 <FormField
                   control={form.control}
@@ -304,14 +326,14 @@ const verifyCollegeUser = async () => {
                     <FormItem>
                       <FormLabel>Contact Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="Email" {...field} />
+                        <Input placeholder="Enter email address" {...field} />
                       </FormControl>
-                      <FormMessage />
                     </FormItem>
                   )}
                 />
               )}
 
+              {/* Submit */}
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Submitting...' : 'Submit Report'}
               </Button>

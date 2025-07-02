@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import bcrypt from 'bcrypt';
+import multer from 'multer';
+import path from 'path';
 
 import {
   registerCollegeUser,
@@ -18,6 +20,20 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 app.use(cors());
+
+// Multer setup for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname);
+  },
+});
+const upload = multer({ storage });
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Connect to MongoDB
 mongoose
@@ -54,7 +70,7 @@ app.get('/', (req, res) => {
   res.send('Welcome to Lost & Found API');
 });
 
-// Items routes
+// GET items
 app.get('/api/items', async (req, res) => {
   try {
     const items = await Item.find().sort({ date: -1 });
@@ -64,26 +80,58 @@ app.get('/api/items', async (req, res) => {
   }
 });
 
-app.post('/api/items', async (req, res) => {
+// ✅ POST item with image upload and correct parsing
+app.post('/api/items', upload.single('image'), async (req, res) => {
   try {
-    const newItem = new Item(req.body);
+    const {
+      title,
+      description,
+      category,
+      status,
+      contactInfo,
+      reportedBy,
+      date,
+      'location[lat]': lat,
+      'location[lng]': lng,
+      'location[description]': locationDescription,
+      isResolved,
+    } = req.body;
+
+    const newItem = new Item({
+      title,
+      description,
+      category,
+      status,
+      contactInfo,
+      reportedBy: reportedBy || 'Anonymous User',
+      isResolved: isResolved === 'true',
+      date: date ? new Date(date) : new Date(),
+      location: {
+        lat: lat ? parseFloat(lat) : undefined,
+        lng: lng ? parseFloat(lng) : undefined,
+        description: locationDescription || '',
+      },
+      imageUrl: req.file
+        ? `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`
+        : '',
+    });
+
     await newItem.save();
     res.status(201).json(newItem);
   } catch (err) {
-    console.error('Error saving item:', err);
-    res.status(400).json({ message: 'Failed to save item', error: err });
+    console.error('❌ Error saving item:', err);
+    res.status(400).json({ message: 'Failed to save item', error: err.message });
   }
 });
 
-// Registration and OTP
+// Registration and OTP routes
 app.post('/api/register/college', registerCollegeUser);
 app.post('/api/register/guest/send-otp', sendGuestOtp);
 app.post('/api/register/guest/verify-otp', verifyGuestOtp);
 
-// Identity verification
+// Identity verification routes
 app.post('/api/verify/college', async (req, res) => {
   const { srNo, password } = req.body;
-
   try {
     const user = await CollegeUser.findOne({ srNo });
     if (!user) {
@@ -103,7 +151,6 @@ app.post('/api/verify/college', async (req, res) => {
 
 app.post('/api/verify/guest', async (req, res) => {
   const { mobile } = req.body;
-
   try {
     const guest = await GuestUser.findOne({ mobile });
     if (!guest) {
@@ -156,5 +203,5 @@ app.get('/api/admin/items/found', async (req, res) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running at http://localhost:${PORT}`);
+  console.log(`🚀 Server running at http://localhost:${PORT}`);
 });
